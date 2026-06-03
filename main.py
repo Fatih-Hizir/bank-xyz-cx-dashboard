@@ -563,51 +563,109 @@ def get_anthropic_api_key():
 
 def local_insight_response(question, n, nps_val, csi_val, loyal_val, ease_val, pct_p, pct_pa, pct_d, sel_prov, sel_branch, sel_gender):
     question_clean = (question or "").strip()
+    q_lower = question_clean.lower()
+
     scope_prov = ", ".join(sel_prov) if sel_prov else "all provinces"
     scope_branch = ", ".join(sel_branch[:6]) + ("..." if len(sel_branch) > 6 else "") if sel_branch else "all branches"
     loyalty_text = "N/A" if pd.isna(loyal_val) else f"{loyal_val:.2f} / 6.0"
     csi_text = "N/A" if pd.isna(csi_val) else f"{csi_val:.2f} / 6.0"
     ease_text = "N/A" if pd.isna(ease_val) else f"{ease_val:.2f} / 6.0"
 
-    q_lower = question_clean.lower()
+    promoter_count = round(n * pct_p / 100)
+    passive_count = round(n * pct_pa / 100)
+    detractor_count = round(n * pct_d / 100)
+
+    context_line = (
+        f"Current filtered scope covers {n:,} respondents across {scope_prov}, "
+        f"with branch filter set to {scope_branch} and gender filter set to {sel_gender}."
+    )
+
+    metric_snapshot = (
+        f"The filtered KPI snapshot is: NPS {nps_val:.1f}, CSI {csi_text}, "
+        f"Loyalty {loyalty_text}, Service Ease {ease_text}, Promoter {pct_p:.1f}%, "
+        f"Passive {pct_pa:.1f}%, and Detractor {pct_d:.1f}%."
+    )
+
     if "passive" in q_lower:
         focus = (
             f"Passive customers are respondents who gave an NPS score of 7 or 8. In this filtered data, "
-            f"Passive is {pct_pa:.1f}%, meaning about {round(n * pct_pa / 100):,} out of {n:,} respondents are satisfied enough not to complain, "
-            f"but not enthusiastic enough to be classified as Promoters."
+            f"Passive is {pct_pa:.1f}%, or about {passive_count:,} out of {n:,} respondents. "
+            f"They are generally satisfied enough not to be classified as Detractors, but not enthusiastic enough to be Promoters. "
+            f"For CX strategy, this group is important because small improvements in service consistency, branch experience, or communication can potentially convert them into Promoters."
         )
     elif "promoter" in q_lower:
         focus = (
             f"Promoters are respondents who gave an NPS score of 9 or 10. In this filtered data, "
-            f"Promoters account for {pct_p:.1f}%, or about {round(n * pct_p / 100):,} respondents. "
-            f"This is the main reason the NPS reaches {nps_val:.1f}."
+            f"Promoters account for {pct_p:.1f}%, or about {promoter_count:,} respondents. "
+            f"This strong Promoter share is the main driver of the current NPS of {nps_val:.1f}. "
+            f"A high Promoter percentage suggests strong customer advocacy, meaning many customers are likely willing to recommend Bank XYZ."
         )
     elif "detractor" in q_lower:
         focus = (
             f"Detractors are respondents who gave an NPS score from 0 to 6. In this filtered data, "
-            f"Detractors account for {pct_d:.1f}%, or about {round(n * pct_d / 100):,} respondents. "
-            f"This group directly reduces NPS because NPS equals Promoter percentage minus Detractor percentage."
+            f"Detractors account for {pct_d:.1f}%, or about {detractor_count:,} respondents. "
+            f"This group directly reduces NPS because NPS equals Promoter percentage minus Detractor percentage. "
+            f"Even though the Detractor share is low here, these customers still matter because their negative experience can reveal specific service friction points."
         )
     elif "nps" in q_lower:
         focus = (
-            f"The current NPS is {nps_val:.1f}. This is calculated as Promoters ({pct_p:.1f}%) minus "
-            f"Detractors ({pct_d:.1f}%). A score above 70 is generally interpreted as excellent advocacy."
+            f"NPS measures customer advocacy, not general satisfaction. The current NPS is {nps_val:.1f}, "
+            f"calculated as Promoters ({pct_p:.1f}%) minus Detractors ({pct_d:.1f}%). "
+            f"Because Passive customers ({pct_pa:.1f}%) are excluded from the formula, NPS focuses only on strong positive and negative recommendation behavior. "
+            f"A score above 70 is generally interpreted as excellent advocacy."
+        )
+    elif "csi" in q_lower or "satisfaction" in q_lower:
+        focus = (
+            f"CSI stands for Customer Satisfaction Index. In this dashboard, CSI is measured on a 1 to 6 scale, where 6 is the best score. "
+            f"The current filtered CSI is {csi_text}, which means customers are reporting very high satisfaction overall. "
+            f"CSI differs from NPS because CSI reflects satisfaction with the experience, while NPS reflects willingness to recommend. "
+            f"So a high CSI tells management that the current service experience is being rated positively, but it does not automatically prove loyalty or advocacy by itself."
+        )
+    elif "loyalty" in q_lower:
+        if pd.isna(loyal_val):
+            focus = (
+                "Loyalty is not available for the current filtered data because the Loyalty column has missing values in this selection. "
+                "In this dataset, Loyalty has a high missing rate, so it should be treated as indicative rather than definitive. "
+                "That means it can support interpretation, but it should not be the only basis for a management decision."
+            )
+        else:
+            focus = (
+                f"Loyalty measures how strongly customers indicate continued preference or attachment to Bank XYZ, using a 1 to 6 scale. "
+                f"The current filtered Loyalty score is {loyalty_text}, which suggests a strong loyalty tendency among respondents with available Loyalty data. "
+                f"However, this dashboard labels Loyalty as indicative because many Loyalty values are missing in the dataset. "
+                f"So the score is useful as a supporting signal, but CSI and NPS should still be read alongside it."
+            )
+    elif "service ease" in q_lower or "ease" in q_lower or "service" in q_lower or "operational" in q_lower:
+        focus = (
+            f"Service Ease is a proxy for how easy or efficient the service experience feels to customers. "
+            f"Because a direct Customer Effort Score is not available, this dashboard uses the operational touchpoint score as the proxy. "
+            f"The current Service Ease value is {ease_text} on a 1 to 6 scale. "
+            f"A high value suggests that customers perceive operational service as smooth, accessible, and low-friction. "
+            f"This metric is especially useful for branch managers because it points to daily service execution rather than broad brand perception."
+        )
+    elif "summary" in q_lower or "overall" in q_lower or "explain" in q_lower or "insight" in q_lower:
+        focus = (
+            f"Overall, the filtered dashboard shows a very strong CX position. NPS is {nps_val:.1f}, driven by "
+            f"{pct_p:.1f}% Promoters and only {pct_d:.1f}% Detractors. CSI is {csi_text}, showing high satisfaction, "
+            f"while Service Ease is {ease_text}, suggesting strong operational experience. "
+            f"The main caution is that Loyalty is {loyalty_text} and should be interpreted carefully because the Loyalty field has substantial missing data."
         )
     else:
         focus = (
-            f"For the current filter scope, the dashboard shows {n:,} respondents, NPS of {nps_val:.1f}, "
+            f"For the current filtered view, the dashboard shows {n:,} respondents, NPS of {nps_val:.1f}, "
             f"CSI of {csi_text}, Loyalty of {loyalty_text}, and Service Ease of {ease_text}. "
-            f"Promoters dominate at {pct_p:.1f}%, while Passive customers are {pct_pa:.1f}% and Detractors are {pct_d:.1f}%."
+            f"Promoters dominate at {pct_p:.1f}% ({promoter_count:,} respondents), while Passive customers are {pct_pa:.1f}% "
+            f"({passive_count:,} respondents) and Detractors are {pct_d:.1f}% ({detractor_count:,} respondents). "
+            f"The safest reading is that customer satisfaction and advocacy are high, while Loyalty should be treated as a supporting indicator due to missing data."
         )
 
     return f"""
 **Smart Insight Mode**
 
 - {focus}
-- Current scope: {scope_prov}; {scope_branch}; gender filter: {sel_gender}.
-- CSI is {csi_text}, which indicates very high satisfaction on the 1 to 6 scale.
-- Service Ease is {ease_text}, so operational touchpoints appear strong in the current filtered view.
-- Interpretation note: this summarizes the filtered dashboard values only and does not test statistical significance.
+- {context_line}
+- {metric_snapshot}
+- Interpretation note: this answer uses only the current filtered dashboard summary. It does not test statistical significance or infer causality.
 """.strip()
 
 
