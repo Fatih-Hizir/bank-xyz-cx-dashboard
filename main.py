@@ -601,15 +601,15 @@ def local_insight_response(question, n, nps_val, csi_val, loyal_val, ease_val, p
         )
 
     return f"""
-**Local Insight Mode**
+**Smart Insight Mode**
 
-API key is not configured, so this response is generated from the dashboard metrics directly.
+This response is generated directly from the dashboard metrics, so it works without a paid API key.
 
 - {focus}
 - Current scope: {scope_prov}; {scope_branch}; gender filter: {sel_gender}.
 - CSI is {csi_text}, which indicates very high satisfaction on the 1 to 6 scale.
 - Service Ease is {ease_text}, so operational touchpoints appear strong in the current filtered view.
-- Interpretation note: this does not test statistical significance. It summarizes the filtered dashboard values only.
+- Interpretation note: this summarizes the filtered dashboard values only and does not test statistical significance.
 """.strip()
 
 
@@ -962,15 +962,14 @@ Selected gender: {sel_gender}
     st.code(summary_text, language="text")
     st.markdown("</div>", unsafe_allow_html=True)
 
-    question = st.text_area("Ask a question about the current filtered data", height=130)
+    question = st.text_area("Ask a question about the current filtered data", value="What does Passive 16.4% mean?", height=130)
 
     if st.button("Generate Insights"):
         api_key = get_anthropic_api_key()
 
         if not api_key:
-            st.warning(
-                "ANTHROPIC_API_KEY is not configured. Showing local metric-based insight instead. "
-                "For full AI answers, add the key to Streamlit Cloud Secrets or set it locally."
+            st.info(
+                "Smart Insight Mode is active. Add ANTHROPIC_API_KEY in Streamlit Cloud Secrets only if you want paid real-time AI responses."
             )
             st.markdown(
                 local_insight_response(
@@ -1011,7 +1010,10 @@ Selected gender: {sel_gender}
                 )
                 st.markdown(response.content[0].text)
             except Exception as exc:
-                st.error(f"AI insight generation failed: {exc}")
+                st.info(
+                    "Real AI is unavailable or the API key is invalid, so Smart Insight Mode is shown instead. "
+                    "This keeps the dashboard usable without API billing."
+                )
                 st.markdown(
                     local_insight_response(
                         question,
