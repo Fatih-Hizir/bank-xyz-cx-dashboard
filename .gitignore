@@ -3,3 +3,5 @@ __pycache__/
 .venv/
 .DS_Store
 .idea/
+bank_dashboard_updated/
+cx_dashboard/
