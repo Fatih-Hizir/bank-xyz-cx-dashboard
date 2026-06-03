@@ -603,8 +603,6 @@ def local_insight_response(question, n, nps_val, csi_val, loyal_val, ease_val, p
     return f"""
 **Smart Insight Mode**
 
-This response is generated directly from the dashboard metrics, so it works without a paid API key.
-
 - {focus}
 - Current scope: {scope_prov}; {scope_branch}; gender filter: {sel_gender}.
 - CSI is {csi_text}, which indicates very high satisfaction on the 1 to 6 scale.
@@ -968,9 +966,6 @@ Selected gender: {sel_gender}
         api_key = get_anthropic_api_key()
 
         if not api_key:
-            st.info(
-                "Smart Insight Mode is active. Add ANTHROPIC_API_KEY in Streamlit Cloud Secrets only if you want paid real-time AI responses."
-            )
             st.markdown(
                 local_insight_response(
                     question,
@@ -1010,10 +1005,6 @@ Selected gender: {sel_gender}
                 )
                 st.markdown(response.content[0].text)
             except Exception as exc:
-                st.info(
-                    "Real AI is unavailable or the API key is invalid, so Smart Insight Mode is shown instead. "
-                    "This keeps the dashboard usable without API billing."
-                )
                 st.markdown(
                     local_insight_response(
                         question,
