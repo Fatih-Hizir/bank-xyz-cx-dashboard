@@ -378,13 +378,13 @@ div[data-testid="stMetricValue"] {
     color: #1F2933 !important;
 }
 
-[data-testid="stDataFrame"] div[role="columnheader"] p,
-[data-testid="stDataFrame"] div[role="columnheader"] span {
-    font-weight: 700 !important;
-    color: #1F2933 !important;
-}
+ [data-testid="stDataFrame"] div[role="columnheader"] p,
+ [data-testid="stDataFrame"] div[role="columnheader"] span {
+     font-weight: 700 !important;
+     color: #1F2933 !important;
+ }
 
-/* Styled HTML tables, used because Streamlit dataframe headers are canvas-rendered and resist normal CSS like an emotionally unavailable spreadsheet */
+/* Styled HTML tables, used because Streamlit dataframe headers are canvas-rendered and resist normal CSS */
 .styled-table-wrap {
     background: #FFFFFF;
     border: 1px solid #E3E8EF;
@@ -535,6 +535,7 @@ def kpi_card(icon, icon_class, label, value, caption, status_label, status_class
 
 
 # Helper to render styled HTML table instead of Streamlit dataframe
+# This keeps headers visibly bold and stable across Streamlit versions.
 def render_html_table(dataframe, max_rows=40):
     display_df = dataframe.head(max_rows).copy()
     html_table = display_df.to_html(index=False, escape=False, classes="styled-table")
@@ -969,7 +970,7 @@ Selected gender: {sel_gender}
         if not api_key:
             st.warning(
                 "ANTHROPIC_API_KEY is not configured. Showing local metric-based insight instead. "
-                "For full AI answers, add the key to .streamlit/secrets.toml or set it as an environment variable."
+                "For full AI answers, add the key to Streamlit Cloud Secrets or set it locally."
             )
             st.markdown(
                 local_insight_response(
