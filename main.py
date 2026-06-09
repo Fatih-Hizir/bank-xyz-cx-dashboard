@@ -487,10 +487,49 @@ def nps_category(value):
     return "Excellent", "status-good"
 
 
+
 def safe_score(value):
     if pd.isna(value):
         return "N/A"
     return f"{value:.2f} / 6.0"
+
+
+# --- Display Translation Helpers ---
+def gender_display_to_raw(value):
+    mapping = {
+        "All": "All",
+        "Male": "Pria",
+        "Female": "Wanita",
+    }
+    return mapping.get(value, value)
+
+
+def translate_gender_label(value):
+    mapping = {
+        "Pria": "Male",
+        "Wanita": "Female",
+        "All": "All",
+    }
+    return mapping.get(value, value)
+
+
+def translate_age_label(value):
+    if pd.isna(value):
+        return "Unknown"
+
+    label = str(value).strip()
+    replacements = {
+        "tahun atau lebih": "years or older",
+        "tahun ke atas": "years or older",
+        "tahun": "years",
+        "Kurang dari": "Under",
+        "kurang dari": "Under",
+        "Lebih dari": "Over",
+        "lebih dari": "Over",
+    }
+    for source, target in replacements.items():
+        label = label.replace(source, target)
+    return " ".join(label.split())
 
 
 def base_layout(height=340, margin=None, showlegend=True):
@@ -690,7 +729,8 @@ with st.sidebar:
         branch_pool = sorted(df_ind["CABANG"].dropna().unique())
 
     sel_branch = st.multiselect("Branch", branch_pool, default=[])
-    sel_gender = st.radio("Gender", ["All", "Pria", "Wanita"])
+    sel_gender = st.radio("Gender", ["All", "Male", "Female"])
+    raw_gender_filter = gender_display_to_raw(sel_gender)
 
 
 # Apply filters to individual data
@@ -699,8 +739,8 @@ if sel_prov:
     filtered = filtered[filtered["PROV"].isin(sel_prov)]
 if sel_branch:
     filtered = filtered[filtered["CABANG"].isin(sel_branch)]
-if sel_gender != "All":
-    filtered = filtered[filtered["gender"] == sel_gender]
+if raw_gender_filter != "All":
+    filtered = filtered[filtered["gender"] == raw_gender_filter]
 
 # Apply same province/branch filters to cabang summary
 filtered_cabang = df_cab.copy()
@@ -853,7 +893,7 @@ with overview_tab:
 
     with col_b:
         st.markdown("<div class='chart-card'><div class='section-title'>Gender Distribution</div>", unsafe_allow_html=True)
-        gender_counts = filtered["gender"].value_counts() if n > 0 else pd.Series(dtype=int)
+        gender_counts = filtered["gender"].map(translate_gender_label).value_counts() if n > 0 else pd.Series(dtype=int)
         fig = go.Figure(
             go.Pie(
                 labels=gender_counts.index,
@@ -867,7 +907,7 @@ with overview_tab:
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='chart-card'><div class='section-title'>Age Group</div>", unsafe_allow_html=True)
-    age_counts = filtered["usia_kategori"].value_counts().sort_index() if n > 0 else pd.Series(dtype=int)
+    age_counts = filtered["usia_kategori"].map(translate_age_label).value_counts().sort_index() if n > 0 else pd.Series(dtype=int)
     fig = go.Figure(go.Bar(x=age_counts.index, y=age_counts.values, marker_color=COLORS["accent_blue"]))
     fig.update_layout(**base_layout(height=340, showlegend=False))
     st.plotly_chart(fig, width="stretch")
